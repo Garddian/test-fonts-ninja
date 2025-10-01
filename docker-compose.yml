@@ -1,0 +1,59 @@
+services:
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
+    restart: unless-stopped
+    environment:
+      TOKEN: devtoken
+      MAX_CONCURRENT_SESSIONS: 2
+      CONNECTION_TIMEOUT: 30000
+      QUEUE_LENGTH: 10
+    ports:
+      - "3001:3000"
+  db:
+    image: mysql:8.0
+    container_name: mysql_scraper
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: nest_scraper
+      MYSQL_USER: nest
+      MYSQL_PASSWORD: nestpass
+      MYSQL_ROOT_PASSWORD: rootpass
+      DB_TIMEZONE: "Europe/Paris"
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    ports:
+      - "3606:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./init/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pnestpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: nest-app-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_DIALECT: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: nest_scraper
+      DB_USER: nest
+      DB_PASS: nestpass
+      DB_SSL: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+
+volumes:
+  dbdata:

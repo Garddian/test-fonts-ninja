@@ -1,0 +1,11 @@
+FROM node:current-alpine
+RUN apk add --no-cache bash python3 make g++ libc6-compat
+ENV NODE_ENV=development
+WORKDIR /app
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN npm ci
+RUN npm i -g @nestjs/cli
+EXPOSE 3000 9229
+CMD ["npm", "run", "start:dev"]
